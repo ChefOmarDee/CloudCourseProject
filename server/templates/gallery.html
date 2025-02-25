@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gallery</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .gallery-item { display: flex; flex-direction: column; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; }
+        .gallery-item img { width: 100%; height: 200px; object-fit: cover; }
+        .image-info { padding: 10px; background-color: #f8f8f8; }
+        .image-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
+        .image-description { font-size: 14px; color: #555; }
+        .button { padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; }
+        .no-images { text-align: center; grid-column: 1 / -1; padding: 40px; background-color: #f8f8f8; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Your Images</h1>
+        <div>
+            <a href="{{ url_for('upload_page') }}" class="button">Upload New Image</a>
+            <a href="{{ url_for('logout') }}" class="button" style="background-color: #dc3545;">Logout</a>
+        </div>
+    </div>
+    <div class="gallery">
+        {% if images %}
+            {% for image in images %}
+                <div class="gallery-item">
+                    {% if 'signed_url' in image %}
+                        <img src="{{ image.signed_url }}" alt="{{ image.title if 'title' in image else 'Uploaded image' }}">
+                    {% else %}
+                        <div style="height: 200px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                            Image not available
+                        </div>
+                    {% endif %}
+                    <div class="image-info">
+                        <div class="image-title">
+                            {% if 'title' in image %}
+                                {{ image.title }}
+                            {% else %}
+                                Untitled Image
+                            {% endif %}
+                        </div>
+                        <div class="image-description">
+                            {% if 'description' in image %}
+                                {{ image.description }}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-images">No images uploaded yet. Upload your first image!</div>
+        {% endif %}
+    </div>
+</body>
+</html>

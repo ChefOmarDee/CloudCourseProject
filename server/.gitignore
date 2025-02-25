@@ -1,0 +1,7 @@
+*.json
+.json
+env.json
+.env
+*.env
+.venv
+env
