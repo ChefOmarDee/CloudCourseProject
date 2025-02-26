@@ -14,9 +14,10 @@ import json
 load_dotenv()
 
 app = Flask(__name__)
+
 # SECRET_KEY = os.getenv("MY_SECRET")
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "./env.json"
-app.secret_key = '89c25124aeaafe4fdcf01a2724187847'  # Change this to a secure secret key
+app.secret_key = os.getenv("FLASK_SECRET")  # Change this to a secure secret key
 
 # Initialize Google Cloud clients
 storage_client = storage.Client()
