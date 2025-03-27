@@ -1,60 +1,151 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Gallery</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .gallery-item { display: flex; flex-direction: column; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; }
-        .gallery-item img { width: 100%; height: 200px; object-fit: cover; }
-        .image-info { padding: 10px; background-color: #f8f8f8; }
-        .image-title { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-        .image-description { font-size: 14px; color: #555; }
-        .button { padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; }
-        .no-images { text-align: center; grid-column: 1 / -1; padding: 40px; background-color: #f8f8f8; border-radius: 4px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Your Images</h1>
-        <div>
-            <a href="{{ url_for('upload_page') }}" class="button">Upload New Image</a>
-            <a href="{{ url_for('logout') }}" class="button" style="background-color: #dc3545;">Logout</a>
-        </div>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #00FF00;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .gallery {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 columns */
+        gap: 20px; /* Space between cards horizontally and vertically */
+        justify-items: center; /* Center the items within each column */
+        margin: 0;
+    }
+
+    .gallery-item {
+        width: 100%; /* Each card takes up 100% of its column width */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+        background-color: #fff;
+    }
+
+    .gallery-item img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .image-info {
+        padding: 10px;
+    }
+
+    .image-title {
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    .image-description {
+        font-size: 14px;
+        color: #555;
+        margin-bottom: 10px;
+    }
+
+    .delete-btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        cursor: pointer;
+        text-align: center;
+        font-size: 14px;
+        border-radius: 4px;
+    }
+
+    .delete-btn:hover {
+        background-color: #c82333;
+    }
+
+    .no-images {
+        text-align: center;
+        grid-column: 1 / -1; /* Spans the whole width of the grid */
+        padding: 40px;
+        background-color: #f8f8f8;
+        border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .gallery {
+            grid-template-columns: repeat(2, 1fr); /* 2 columns for smaller screens */
+        }
+    }
+
+    @media (max-width: 480px) {
+        .gallery {
+            grid-template-columns: 1fr; /* 1 column for very small screens */
+        }
+    }
+</style>
+
+<div class="header">
+    <h1>Your Images</h1>
+    <div>
+        <a href="{{ url_for('upload_page') }}" class="button">Upload New Image</a>
     </div>
-    <div class="gallery">
-        {% if images %}
-            {% for image in images %}
-                <div class="gallery-item">
-                    {% if 'signed_url' in image %}
-                        <img src="{{ image.signed_url }}" alt="{{ image.title if 'title' in image else 'Uploaded image' }}">
-                    {% else %}
-                        <div style="height: 200px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                            Image not available
-                        </div>
-                    {% endif %}
-                    <div class="image-info">
-                        <div class="image-title">
-                            {% if 'title' in image %}
-                                {{ image.title }}
-                            {% else %}
-                                Untitled Image
-                            {% endif %}
-                        </div>
-                        <div class="image-description">
-                            {% if 'description' in image %}
-                                {{ image.description }}
-                            {% endif %}
-                        </div>
+</div>
+
+<div class="gallery">
+    {% if images %}
+        {% for image in images %}
+            <div class="gallery-item">
+                {% if 'signed_url' in image %}
+                    <img src="{{ image.signed_url }}" alt="{{ image.title if 'title' in image else 'Uploaded image' }}">
+                {% else %}
+                    <div style="height: 200px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                        Image not available
                     </div>
+                {% endif %}
+                <div class="image-info">
+                    <div class="image-title">{{ image.title if 'title' in image else 'Untitled Image' }}</div>
+                    <div class="image-description">{{ image.description if 'description' in image else '' }}</div>
+                    <button class="delete-btn" onclick="deleteImage('{{ image.key.id_or_name }}')">Delete</button>
                 </div>
-            {% endfor %}
-        {% else %}
-            <div class="no-images">No images uploaded yet. Upload your first image!</div>
-        {% endif %}
-    </div>
-</body>
-</html>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="no-images">No images uploaded yet. Upload your first image!</div>
+    {% endif %}
+</div>
+
+<script>
+    function deleteImage(imageId) {
+        if (!imageId) {
+            alert("Error: Image ID not found.");
+            return;
+        }
+
+        if (confirm("Are you sure you want to delete this image?")) {
+            fetch('/delete-image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image_id: imageId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Image deleted successfully");
+                    location.reload();
+                } else {
+                    alert("Error deleting image: " + data.error);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+    }
+</script>
