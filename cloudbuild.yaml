@@ -24,7 +24,7 @@ steps:
       - "--allow-unauthenticated"
 
 options:
-  logging: NONE # No logs will be stored
+  logging: CLOUD_LOGGING_ONLY # Logs will be stored in Cloud Logging
 
 substitutions:
   _SERVICE_NAME: "${BRANCH_NAME}-service"
