@@ -1,0 +1,15 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/project3-455422/github.com/chefomardee/cloudhw3:$COMMIT_SHA",
+        ".",
+      ]
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - "gcr.io/project3-455422/github.com/chefomardee/cloudhw3:$COMMIT_SHA"
