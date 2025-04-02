@@ -1,4 +1,13 @@
 steps:
+  # Access secrets and create files
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud secrets versions access latest --secret=app-env-file > ./server/.env
+        gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
+
   # Build the container image
   - name: "gcr.io/cloud-builders/docker"
     args:
@@ -36,6 +45,3 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY # Logs will be stored in Cloud Logging
-
-# substitutions:
-#   _SERVICE_NAME: "${BRANCH_NAME}-service"
