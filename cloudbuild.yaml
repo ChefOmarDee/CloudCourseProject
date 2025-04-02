@@ -8,13 +8,31 @@ steps:
         gcloud secrets versions access latest --secret=app-env-file > ./server/.env
         gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
 
-  # Build the container image
+
+  # Determine if branch is blue or green
+  - name: "gcr.io/cloud-builders/gcloud" # Using gcloud image instead of bash
+    id: "set-env-vars"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        if [[ "$BRANCH_NAME" == "blue" ]]; then
+          echo "COLOR=blue" >> /workspace/env_vars
+        elif [[ "$BRANCH_NAME" == "green" ]]; then
+          echo "COLOR=green" >> /workspace/env_vars
+        else
+          echo "Invalid branch, exiting"; exit 1
+        fi
+
+  # Build the container image with branch-specific tag
+
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
         "build",
         "-t",
-        "gcr.io/$PROJECT_ID/github.com/chefomardee/cloudhw3:$COMMIT_SHA",
+        "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA",
+
         "-f",
         "server/Dockerfile",
         "./server",
@@ -22,10 +40,10 @@ steps:
 
   # Push the container image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
-    args:
-      ["push", "gcr.io/$PROJECT_ID/github.com/chefomardee/cloudhw3:$COMMIT_SHA"]
+    args: ["push", "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"]
 
-  # Deploy container image to Cloud Run
+  # Deploy new revision to the Cloud Run service
+
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -33,15 +51,34 @@ steps:
       - "deploy"
       - "cloudhw3"
       - "--image"
-      - "gcr.io/$PROJECT_ID/github.com/chefomardee/cloudhw3:$COMMIT_SHA"
+      - "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"
+
       - "--region"
       - "us-central1"
       - "--platform"
       - "managed"
       - "--allow-unauthenticated"
+      - "--tag"
+      - "$BRANCH_NAME"
+
+  # Set traffic split between blue and green versions
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "services"
+      - "update-traffic"
+      - "cloudhw3"
+      - "--region"
+      - "us-central1"
+      - "--platform"
+      - "managed"
+      - "--to-tags"
+      - "blue=50,green=50"
 
 images:
-  - "gcr.io/$PROJECT_ID/github.com/chefomardee/cloudhw3:$COMMIT_SHA"
+  - "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"
 
 options:
-  logging: CLOUD_LOGGING_ONLY # Logs will be stored in Cloud Logging
+  logging: CLOUD_LOGGING_ONLY
+
