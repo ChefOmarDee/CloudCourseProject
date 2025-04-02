@@ -9,7 +9,7 @@ steps:
         gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
 
   # Determine if branch is blue or green
-  - name: "gcr.io/cloud-builders/bash"
+  - name: "gcr.io/cloud-builders/gcloud" # Using gcloud image instead of bash
     id: "set-env-vars"
     entrypoint: "bash"
     args:
@@ -39,13 +39,13 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"]
 
-  # Deploy new revision to the Cloud Run service without affecting the other color
+  # Deploy new revision to the Cloud Run service
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
       - "run"
       - "deploy"
-      - "cloudhw3" # Single Cloud Run service
+      - "cloudhw3"
       - "--image"
       - "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"
       - "--region"
@@ -54,9 +54,9 @@ steps:
       - "managed"
       - "--allow-unauthenticated"
       - "--tag"
-      - "$BRANCH_NAME" # Tag the revision as blue or green
+      - "$BRANCH_NAME"
 
-  # Set traffic split between the two latest blue and green versions
+  # Set traffic split between blue and green versions
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
