@@ -1,0 +1,47 @@
+# cloudbuild.yaml
+steps:
+  # Access secrets and create files
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud secrets versions access latest --secret=app-env-file > ./server/.env
+        gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
+
+  # Build the container image with branch-specific name
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA",
+        "-f",
+        "server/Dockerfile",
+        "./server",
+      ]
+
+  # Push the container image to Container Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"]
+
+  # Deploy container image to Cloud Run with branch-specific service name
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "cloudhw3-${BRANCH_NAME}" # Service name includes branch
+      - "--image"
+      - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
+      - "--region"
+      - "us-central1"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+
+images:
+  - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
