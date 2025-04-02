@@ -8,6 +8,7 @@ steps:
         gcloud secrets versions access latest --secret=app-env-file > ./server/.env
         gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
 
+
   # Determine if branch is blue or green
   - name: "gcr.io/cloud-builders/gcloud" # Using gcloud image instead of bash
     id: "set-env-vars"
@@ -24,12 +25,14 @@ steps:
         fi
 
   # Build the container image with branch-specific tag
+
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
         "build",
         "-t",
         "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA",
+
         "-f",
         "server/Dockerfile",
         "./server",
@@ -40,6 +43,7 @@ steps:
     args: ["push", "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"]
 
   # Deploy new revision to the Cloud Run service
+
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
@@ -48,6 +52,7 @@ steps:
       - "cloudhw3"
       - "--image"
       - "gcr.io/$PROJECT_ID/cloudhw3:$BRANCH_NAME-$COMMIT_SHA"
+
       - "--region"
       - "us-central1"
       - "--platform"
@@ -76,3 +81,4 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+
