@@ -1,31 +1,47 @@
+# cloudbuild.yaml
 steps:
-  # Step 1: Build Docker image from the server folder
+  # Access secrets and create files
+  - name: "gcr.io/cloud-builders/gcloud"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        gcloud secrets versions access latest --secret=app-env-file > ./server/.env
+        gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
+
+  # Build the container image with branch-specific name
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
         "build",
         "-t",
-        "gcr.io/$PROJECT_ID/myapp:$COMMIT_SHA",
+        "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA",
         "-f",
         "server/Dockerfile",
-        "server/",
+        "./server",
       ]
 
-  # Step 2: Push Docker image to Google Container Registry (GCR)
+  # Push the container image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
-    args: ["push", "gcr.io/$PROJECT_ID/myapp:$COMMIT_SHA"]
+    args: ["push", "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"]
 
-  # Step 3: Deploy to Cloud Run
-  - name: "gcr.io/cloud-builders/gcloud"
+  # Deploy container image to Cloud Run with branch-specific service name
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
     args:
       - "run"
       - "deploy"
-      - "${_SERVICE_NAME}" # Dynamic service name based on branch
-      - "--image=gcr.io/$PROJECT_ID/myapp:$COMMIT_SHA"
-      - "--region=us-central1"
-      - "--platform=managed"
+      - "cloudhw3-${BRANCH_NAME}" # Service name includes branch
+      - "--image"
+      - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
+      - "--region"
+      - "us-central1"
+      - "--platform"
+      - "managed"
       - "--allow-unauthenticated"
 
-# Dynamically set the service name based on the branch
-substitutions:
-  _SERVICE_NAME: "${BRANCH_NAME}-service"
+images:
+  - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
