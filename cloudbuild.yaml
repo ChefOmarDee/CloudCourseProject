@@ -1,5 +1,6 @@
 # cloudbuild.yaml
 steps:
+  # Access secrets and create files
   - name: "gcr.io/cloud-builders/gcloud"
     entrypoint: "bash"
     args:
@@ -8,7 +9,7 @@ steps:
         gcloud secrets versions access latest --secret=app-env-file > ./server/.env
         gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
 
-  # Build the container image
+  # Build the container image with branch-specific name
   - name: "gcr.io/cloud-builders/docker"
     args:
       [
@@ -20,17 +21,17 @@ steps:
         "./server",
       ]
 
-  # Push the container image
+  # Push the container image to Container Registry
   - name: "gcr.io/cloud-builders/docker"
     args: ["push", "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"]
 
-  # Deploy to the appropriate service (blue or green)
+  # Deploy container image to Cloud Run with branch-specific service name
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
     entrypoint: gcloud
     args:
       - "run"
       - "deploy"
-      - "cloudhw3-${BRANCH_NAME}"
+      - "cloudhw3-${BRANCH_NAME}" # Service name includes branch
       - "--image"
       - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
       - "--region"
@@ -38,82 +39,9 @@ steps:
       - "--platform"
       - "managed"
       - "--allow-unauthenticated"
-      - "--no-traffic"
-      - "--tag"
-      - "${BRANCH_NAME}"
-
-  # Update traffic splitting on the public endpoint
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint: bash
-    args:
-      - "-c"
-      - |
-        # Get the latest revision URL for both services
-        BLUE_URL=$(gcloud run services describe cloudhw3-blue --region=us-central1 --format='value(status.url)')
-        GREEN_URL=$(gcloud run services describe cloudhw3-green --region=us-central1 --format='value(status.url)')
-
-        # Deploy or update the public endpoint with traffic splitting
-        gcloud run deploy cloudhw3-public \
-          --region=us-central1 \
-          --platform=managed \
-          --allow-unauthenticated \
-          --set-env-vars="BLUE_URL=${BLUE_URL},GREEN_URL=${GREEN_URL}" \
-          --image=gcr.io/google-samples/hello-app:1.0 \  # Use a tiny proxy image
-          --command="/bin/sh" \
-          --args="-c","'while true; do sleep 1000; done'" \
-          --port=8080
-
-        # Set up traffic splitting (50/50)
-        gcloud run services update-traffic cloudhw3-public \
-          --to-revisions=cloudhw3-blue=50,cloudhw3-green=50 \
-          --region=us-central1
 
 images:
   - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
-# # cloudbuild.yaml
-# steps:
-#   # Access secrets and create files
-#   - name: "gcr.io/cloud-builders/gcloud"
-#     entrypoint: "bash"
-#     args:
-#       - "-c"
-#       - |
-#         gcloud secrets versions access latest --secret=app-env-file > ./server/.env
-#         gcloud secrets versions access latest --secret=app-service-account > ./server/env.json
-
-#   # Build the container image with branch-specific name
-#   - name: "gcr.io/cloud-builders/docker"
-#     args:
-#       [
-#         "build",
-#         "-t",
-#         "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA",
-#         "-f",
-#         "server/Dockerfile",
-#         "./server",
-#       ]
-
-#   # Push the container image to Container Registry
-#   - name: "gcr.io/cloud-builders/docker"
-#     args: ["push", "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"]
-
-#   # Deploy container image to Cloud Run with branch-specific service name
-#   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
-#     entrypoint: gcloud
-#     args:
-#       - "run"
-#       - "deploy"
-#       - "cloudhw3-${BRANCH_NAME}" # Service name includes branch
-#       - "--image"
-#       - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
-#       - "--region"
-#       - "us-central1"
-#       - "--platform"
-#       - "managed"
-#       - "--allow-unauthenticated"
-
-# images:
-#   - "gcr.io/$PROJECT_ID/cloudhw3-${BRANCH_NAME}:$COMMIT_SHA"
 
 options:
   logging: CLOUD_LOGGING_ONLY
